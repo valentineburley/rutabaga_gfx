@@ -19,6 +19,7 @@ use magma_gpu::util::Handle as MagmaGpuHandle;
 use magma_gpu::util::MAGMA_GPU_HANDLE_TYPE_MEM_DMABUF;
 
 use crate::rutabaga_gralloc::formats::DrmFormat;
+use crate::rutabaga_gralloc::gbm_bindings::*;
 use crate::rutabaga_gralloc::gralloc::Gralloc;
 use crate::rutabaga_gralloc::gralloc::ImageAllocationInfo;
 use crate::rutabaga_gralloc::gralloc::ImageMemoryRequirements;
@@ -27,7 +28,6 @@ use crate::rutabaga_gralloc::gralloc::RUTABAGA_GRALLOC_USE_LINEAR;
 use crate::rutabaga_gralloc::gralloc::RUTABAGA_GRALLOC_USE_PROTECTED;
 use crate::rutabaga_gralloc::gralloc::RUTABAGA_GRALLOC_USE_RENDERING;
 use crate::rutabaga_gralloc::gralloc::RUTABAGA_GRALLOC_USE_SCANOUT;
-use crate::rutabaga_gralloc::gbm_bindings::*;
 use crate::rutabaga_gralloc::rendernode;
 use crate::rutabaga_utils::RutabagaError;
 use crate::rutabaga_utils::RutabagaResult;
