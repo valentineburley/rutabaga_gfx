@@ -68,7 +68,9 @@ impl MinigbmDevice {
     /// Returns a new `MinigbmDevice` if there is a rendernode in `/dev/dri/` that is accepted by
     /// the minigbm library.
     pub fn init() -> RutabagaResult<Box<dyn Gralloc>> {
-        let undesired: &[&str] = &["vgem", "pvr"];
+        // Filter out virtual DRM devices like "vgem" which do not support hardware-accelerated
+        // rendering or scanout allocation.
+        let undesired: &[&str] = &["vgem"];
         let (descriptor, device_name) = rendernode::open_device(undesired)?;
 
         // SAFETY:
