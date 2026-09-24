@@ -27,46 +27,46 @@ use crate::rutabaga_gralloc::gralloc::RUTABAGA_GRALLOC_USE_LINEAR;
 use crate::rutabaga_gralloc::gralloc::RUTABAGA_GRALLOC_USE_PROTECTED;
 use crate::rutabaga_gralloc::gralloc::RUTABAGA_GRALLOC_USE_RENDERING;
 use crate::rutabaga_gralloc::gralloc::RUTABAGA_GRALLOC_USE_SCANOUT;
-use crate::rutabaga_gralloc::minigbm_bindings::*;
+use crate::rutabaga_gralloc::gbm_bindings::*;
 use crate::rutabaga_gralloc::rendernode;
 use crate::rutabaga_utils::RutabagaError;
 use crate::rutabaga_utils::RutabagaResult;
 use crate::rutabaga_utils::RUTABAGA_MAP_CACHE_CACHED;
 use crate::rutabaga_utils::RUTABAGA_MAP_CACHE_WC;
 
-struct MinigbmDeviceInner {
+struct GbmDeviceInner {
     _fd: File,
     gbm: *mut gbm_device,
 }
 
 // SAFETY:
-// Safe because minigbm handles synchronization internally.
-unsafe impl Send for MinigbmDeviceInner {}
+// Safe because GBM handles synchronization internally.
+unsafe impl Send for GbmDeviceInner {}
 // SAFETY:
-// Safe because minigbm handles synchronization internally.
-unsafe impl Sync for MinigbmDeviceInner {}
+// Safe because GBM handles synchronization internally.
+unsafe impl Sync for GbmDeviceInner {}
 
-impl Drop for MinigbmDeviceInner {
+impl Drop for GbmDeviceInner {
     fn drop(&mut self) {
         // SAFETY:
-        // Safe because MinigbmDeviceInner is only constructed with a valid minigbm_device.
+        // Safe because GbmDeviceInner is only constructed with a valid gbm_device.
         unsafe {
             gbm_device_destroy(self.gbm);
         }
     }
 }
 
-/// A device capable of allocating `MinigbmBuffer`.
+/// A device capable of allocating `GbmBuffer`.
 #[derive(Clone)]
-pub struct MinigbmDevice {
-    minigbm_device: Arc<MinigbmDeviceInner>,
-    last_buffer: Option<Arc<MinigbmBuffer>>,
+pub struct GbmDevice {
+    gbm_device: Arc<GbmDeviceInner>,
+    last_buffer: Option<Arc<GbmBuffer>>,
     device_name: String,
 }
 
-impl MinigbmDevice {
-    /// Returns a new `MinigbmDevice` if there is a rendernode in `/dev/dri/` that is accepted by
-    /// the minigbm library.
+impl GbmDevice {
+    /// Returns a new `GbmDevice` if there is a rendernode in `/dev/dri/` that is accepted by
+    /// the gbm library.
     pub fn init() -> RutabagaResult<Box<dyn Gralloc>> {
         // Filter out virtual DRM devices like "vgem" which do not support hardware-accelerated
         // rendering or scanout allocation.
@@ -81,8 +81,8 @@ impl MinigbmDevice {
             return Err(MagmaGpuError::IoError(Error::last_os_error()).into());
         }
 
-        Ok(Box::new(MinigbmDevice {
-            minigbm_device: Arc::new(MinigbmDeviceInner {
+        Ok(Box::new(GbmDevice {
+            gbm_device: Arc::new(GbmDeviceInner {
                 _fd: descriptor,
                 gbm,
             }),
@@ -112,7 +112,7 @@ pub fn rutabaga_gralloc_flags_to_gbm_flags(flags: RutabagaGrallocFlags) -> u32 {
     gbm_flags
 }
 
-impl Gralloc for MinigbmDevice {
+impl Gralloc for GbmDevice {
     fn supports_external_gpu_memory(&self) -> bool {
         true
     }
@@ -129,7 +129,7 @@ impl Gralloc for MinigbmDevice {
         #[allow(clippy::undocumented_unsafe_blocks)]
         let bo = unsafe {
             gbm_bo_create(
-                self.minigbm_device.gbm,
+                self.gbm_device.gbm,
                 info.width,
                 info.height,
                 info.drm_format.0,
@@ -141,7 +141,7 @@ impl Gralloc for MinigbmDevice {
         }
 
         let mut reqs: ImageMemoryRequirements = Default::default();
-        let gbm_buffer = MinigbmBuffer {
+        let gbm_buffer = GbmBuffer {
             bo,
             _device: self.clone(),
         };
@@ -193,7 +193,7 @@ impl Gralloc for MinigbmDevice {
         #[allow(clippy::undocumented_unsafe_blocks)]
         let bo = unsafe {
             gbm_bo_create(
-                self.minigbm_device.gbm,
+                self.gbm_device.gbm,
                 reqs.info.width,
                 reqs.info.height,
                 reqs.info.drm_format.0,
@@ -205,7 +205,7 @@ impl Gralloc for MinigbmDevice {
             return Err(MagmaGpuError::IoError(Error::last_os_error()).into());
         }
 
-        let gbm_buffer = MinigbmBuffer {
+        let gbm_buffer = GbmBuffer {
             bo,
             _device: self.clone(),
         };
@@ -217,20 +217,20 @@ impl Gralloc for MinigbmDevice {
     }
 }
 
-/// An allocation from a `MinigbmDevice`.
-pub struct MinigbmBuffer {
+/// An allocation from a `GbmDevice`.
+pub struct GbmBuffer {
     bo: *mut gbm_bo,
-    _device: MinigbmDevice,
+    _device: GbmDevice,
 }
 
 // SAFETY:
-// Safe because minigbm handles synchronization internally.
-unsafe impl Send for MinigbmBuffer {}
+// Safe because GBM handles synchronization internally.
+unsafe impl Send for GbmBuffer {}
 // SAFETY:
-// Safe because minigbm handles synchronization internally.
-unsafe impl Sync for MinigbmBuffer {}
+// Safe because GBM handles synchronization internally.
+unsafe impl Sync for GbmBuffer {}
 
-impl MinigbmBuffer {
+impl GbmBuffer {
     /// Width in pixels.
     pub fn width(&self) -> u32 {
         // SAFETY:
@@ -295,7 +295,7 @@ impl MinigbmBuffer {
     }
 }
 
-impl Drop for MinigbmBuffer {
+impl Drop for GbmBuffer {
     fn drop(&mut self) {
         // SAFETY:
         // This is always safe to call with a valid gbm_bo pointer.
